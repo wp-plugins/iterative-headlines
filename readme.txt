@@ -1,4 +1,4 @@
-=== Plugin Name ===
+=== The Best Title Testing Tool for WordPress ===
 Contributors: iterative
 Tags: title, testing, experiment, headline
 Requires at least: 3.0.1
@@ -7,13 +7,13 @@ Stable tag: 1.0
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
-Use state-of-the-art artificial intelligence to pick your post titles for maximum impact.
+Use state-of-the-art artificial intelligence to find the perfect clickbait titles for maximum impact.
 
 == Description ==
 
 Have you ever wondered how sites like Buzzfeed, Upworthy and the Huffington Post get their content to go viral? Why do people share their content so widely? The answer is testing.
 
-Over 80% of people exposed to your site will read your headlines [1]. For most sites, less than 20% of people will read the content. We've built a state-of-the-art algorithm for continuously improving your post titles to fix this problem.
+Over 80% of people exposed to your site will read your headlines. But for most sites, less than 20% of people will read the content. We've built a brand new algorithm for continuously improving your post titles to fix this problem.
  
 You don't need any math, any statistics, there's no "p values" or "z scores" or anything like that. Just put in your post titles and our plugin gets to work for you. Our artificial intelligence takes care of all the hard stuff behind the scenes.
 
