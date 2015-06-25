@@ -3,7 +3,8 @@
  * MENU AND OPTIONS PAGE 
  * ==================================================== */
 function iterative_add_admin_menu(  ) { 
-	add_options_page( 'Iterative Headlines', '<span style="color: #FF303A; font-weight:bold;">iterative&trade;</span> Headlines', 'manage_options', 'headlines', 'iterative_options_page' );
+	//add_options_page( 'Iterative Headlines', '<span style="color: #FF303A; font-weight:bold;">iterative&trade;</span> Headlines', 'manage_options', 'headlines', 'iterative_options_page' );
+	add_options_page( ITERATIVE_HEADLINES_BRANDING, ITERATIVE_HEADLINES_BRANDING, 'manage_options', 'headlines', 'iterative_options_page' );
 }
 
 
@@ -67,7 +68,7 @@ function iterative_radio_goal_render(  ) {
 	<script type='text/javascript'>
 	function premiumClick(id) {
 		if(id == 2 || id == 8) {
-			alert("Thanks for your interest. This feature will be available in a future version of Iterative Headlines.")
+			alert("Thanks for your interest. This feature will be available in a future version of " . ITERATIVE_HEADLINES_BRANDING . ".")
 		} else {
 			window.open("http://toolkit.iterative.ca/headlines/buy?id=" + id);
 			
@@ -94,9 +95,13 @@ function iterative_radio_goal_render(  ) {
 
 
 function iterative_settings_section_callback(  ) { 
-	echo __( 'The configuration for this plugin determines whether posts are tested and what the goal is. You should configure the experiments themselves on the individual post page. Please note each user sees only one variant (so from any individual perspective, there will be no test, just one headline shown!)
+	/*echo __( 'The configuration for this plugin determines whether posts are tested and what the goal is. You should configure the experiments themselves on the individual post page. Please note each user sees only one variant (so from any individual perspective, there will be no test, just one headline shown!)
 		<p><span class="iterative">iterative</span>&trade; Headlines is developed in Canada by Iterative Research Inc. and uses our own proprietary blend of <strong>state-of-the-art artificial intelligence</strong> discovered by researchers at Stanford, Princeton, the University of Chicago and the University of British Columbia. By using this cutting edge science, we can deliver rapid and accurate experiment results on even lower traffic websites, much faster than other testing platforms.</p>
+		', 'wordpress' );*/
+	echo __( 'The configuration for this plugin determines whether posts are tested and what the goal is. You should configure the experiments themselves on the individual post page. Please note each user sees only one variant (so from any individual perspective, there will be no test, just one headline shown!)
+		<p>' . ITERATIVE_HEADLINES_BRANDING . ' is developed in Canada by Iterative Research Inc. and uses our own proprietary blend of <strong>state-of-the-art artificial intelligence</strong> discovered by researchers at Stanford, Princeton, the University of Chicago and the University of British Columbia. By using this cutting edge science, we can deliver rapid and accurate experiment results on even lower traffic websites, much faster than other testing platforms.</p>
 		', 'wordpress' );
+
 	// no demo or science page ready yet / <!--<table width="100%" class="cta-top"><tr><td>Want to know more? <a href="#">Click here to see a demo.</a></td> <td align="right">Would you like to receive emails about statistical web optimization? <a href="#">Sign up for our mailing list.</a></td></tr></table>-->
 }
 
@@ -157,7 +162,8 @@ function iterative_options_page(  ) {
 
 	</style>	
 	<div class='wrap'>
-		<h2><span class='iterative'>iterative</span>&trade; Headlines</h2>
+		<!--<h2><span class='iterative'>iterative</span>&trade; Headlines</h2>-->
+		<h2><?php echo ITERATIVE_HEADLINES_BRANDING; ?></h2>
 
 		<form action='options.php' method='post'>
 			<?php
@@ -166,7 +172,7 @@ function iterative_options_page(  ) {
 			?>
 			<br />
 			<input type="submit" name="submit" id="submit" class="button button-primary" value="Save Changes"  />
-			<input type='button' title="Support the development of sophisticated statistical testing tools by signing up for the premium version of Headlines and start running unlimited tests, optimizing your site for more profitable advertising, mailing list signups and other criteria." onclick='location.href="http://toolkit.iterative.ca/headlines/buy";' value='Go Premium' class='button premium-button' />
+			<input type='button' title="Support the development of sophisticated statistical testing tools by signing up for the <?php echo ITERATIVE_HEADLINES_BRANDING; ?> Pro and start running unlimited tests, optimizing your site for more profitable advertising, mailing list signups and other criteria." onclick='location.href="http://toolkit.iterative.ca/headlines/buy";' value='Go Premium' class='button premium-button' />
 		</form>
 		<br />
 		<p class='description' title="Don't worry! If the optimization service goes offline, your headlines will continue to work fine."><strong>Optimization Service Status</strong>: <?php

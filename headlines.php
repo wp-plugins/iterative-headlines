@@ -1,8 +1,8 @@
 <?php
 /*
-Plugin Name: Iterative Headline Testing Tool
+Plugin Name: Viral Headlines&trade;
 Plugin URI: http://toolkit.iterative.ca/headlines/
-Description: Test your post titles and headlines with state-of-the-art artificial intelligence. This plugin uses an externally hosted API that collects information about how your users interact with your posts and the content of your headlines. All data is used solely in aggregate and for the purpose of optimizing your site.
+Description: Test your post titles and headlines with state-of-the-art artificial intelligence. 
 Author: Iterative Research Inc.
 Version: 1.0
 Author URI: mailto:joe@iterative.ca
@@ -17,6 +17,7 @@ require_once dirname(__FILE__) . "/headlines_pointer.php";
 require_once dirname(__FILE__) . "/headlines_options.php";
 require_once dirname(__FILE__) . "/headlines_calculator.php";
 
+define("ITERATIVE_HEADLINES_BRANDING", "Viral Headlines&trade;");
 define("ITERATIVE_GOAL_CLICKS", 1);
 define("ITERATIVE_GOAL_COMMENTS", 4);
 
@@ -100,18 +101,19 @@ function iterative_get_variants($post_id) {
 }
 
 function iterative_add_javascript() {
-	if(!is_admin()) {
+	//if(!is_admin()) {
 		echo "<script type='text/javascript' src='" . IterativeAPI::getTrackerURL() . "'></script>";
 
 		// record a click conversion
-		
+
 		if(is_single() && parse_url(wp_get_referer(), PHP_URL_HOST)	== parse_url($_SERVER["HTTP_HOST"], PHP_URL_HOST)) {
 			global $post;
 			$id = $post->ID;
 			$variants = iterative_get_variants($id);
 
 			$variant = IterativeAPI::selectVariant($id, array_keys($variants));
-			if(count($variants) <= 1) {
+			
+			if(count($variants) >= 1) {
 				echo "<script type='text/javascript' src='" . IterativeAPI::getSuccessURL(ITERATIVE_GOAL_CLICKS, $variant, $id) . "'></script>";
 			}
 		}
@@ -128,7 +130,7 @@ function iterative_add_javascript() {
 			}
 			unset($_SESSION['iterative_comments_posted']);
 		}
-	}
+	//}
 }
 
 add_filter('preprocess_comment', function($comment) {
@@ -168,7 +170,7 @@ function iterative_add_headline_variants($post) {
 	echo "<style type='text/css'>
 	.iterative-headline-variant { 
 		padding: 3px 8px;
-		padding-left: 34px;
+		padding-left: 37px;
 	    font-size: 1.7em;
 	    line-height: 100%;
 	    height: 1.7em;
@@ -179,7 +181,51 @@ function iterative_add_headline_variants($post) {
 	    background-image:url(" . plugins_url("atom_24.png", __FILE__) . ");
 	    background-position: 6px 6px; 
 	    background-repeat: no-repeat;
-	}</style><script type='text/javascript'>
+	}
+	.iterative-message { 
+		position: relative;
+	    text-align: right;
+	    top: 7px;
+	    right: 8px;
+	    height: 0px;
+	    font-size: 10px;
+	    line-height: 14px; 
+	    cursor:pointer;
+	    opacity:0.4;
+	}
+	.iterative-message:hover { opacity:1; }
+
+	.iterative-message.up { 
+		top:-27px;
+	}
+	.iterative-message.winner { opacity: 1; }
+	.iterative-message.winner:hover { opacity:0.5; }
+	.iterative-message span.message { 
+ 		color: white;
+	    font-weight: bolder;
+	    padding: 2px;
+	    border-radius: 5px;
+	    padding-left: 5px;
+	    padding-right: 5px;
+	}
+    .iterative-message span.message.success {
+    	background-color: hsl(94, 61%, 44%);
+    }
+
+    .iterative-message span.message.fail {
+		background-color: hsl(0, 61%, 44%);
+    }
+    .iterative-message span.message.baseline {
+   	    background-color: #777;
+    }
+    .iterative-message span.aside {
+    	color:#CCC;
+    	background-color:white; 
+    	border-radius:5px;
+    	top:2px; position:relative;
+    	padding:0px;padding-bottom:0; padding-left:5px; padding-right:5px;
+    }
+    </style><script type='text/javascript'>
 	jQuery(function() {
 		jQuery('.iterative-headline-variant').parent().on('keyup', '.iterative-headline-variant', (function() {
 			var empties = false;
@@ -189,29 +235,201 @@ function iterative_add_headline_variants($post) {
 						empties = true;
 						return;
 					} else {
+						
 						jQuery(this).remove();
 					}
 				}
 
 			});
-
+			
 			if(!empties) {
 				if(jQuery('.iterative-headline-variant').length < 9) 
-					jQuery('#iterative_first_variant').clone().val('').attr('id', '').insertAfter(jQuery('.iterative-headline-variant:last'));
+				{
+					var thing = jQuery('.iterative-headline-variant:first').clone().val('').attr('id', '');
+					thing.insertAfter(jQuery('.iterative-headline-variant:last'));
+			
+				}	
 			}
 		}));
 	});
 	</script>";
+
+	$lc = 0.1;
+	$uc = 0.9;	
+	$debug = false;
+
+	$title = trim(get_the_title($post->ID));
+	$ptv = get_post_meta( $post->ID, 'iterative_post_title_variants', true);   
+
+	$type = IterativeAPI::getType();
+ 	$adviceTitles = $ptv;
+	@array_unshift($adviceTitles, $title);;
+	
+	$advice = (IterativeAPI::getAdvice($post->ID, $adviceTitles));
+	$pms = IterativeAPI::getParameters($post->ID);
+	if(isset($pms[md5($title)])) {
+		$baseline = $pms[md5($title)];
+		
+		$blt = $baseline['a']+$baseline['b'];
+		$baseline_ratio = $baseline['a']/$blt;
+
+	}
+
+	echo "
+		<div class='iterative-message up' title='Some more conversion data?'>
+		    <span class='message baseline'>";
+		    if($debug) { echo "{$baseline['a']}:{$baseline['b']} "; }
+		    echo "Baseline</span>
+		    <br>
+		    <!--<span class='aside'>311 users have seen this</span>-->
+		</div>
+	";
 	//placeholder="Enter experimental title variant."
 	// reload these.
-	$ptv = get_post_meta( $post->ID, 'iterative_post_title_variants');
-	$ptv = $ptv[0];
+
+	$shown = false;	
+	$best_ratio = 0;
+	$best_key = null;
+	$number_same = 0;
+	$uresults = $lresults = array();
 	if(is_array($ptv)) {
-		foreach($ptv as $p) {
+		foreach($ptv as $k=>$p) {
+			$p = trim($p);
+			if($p == '') { unset($p); continue; }
+			if(isset($pms[md5($p)])) {
+				$score =($pms[md5($p)]);
+				$slt = ($score['a']+$score['b']);
+				$score_ratio = $score['a']	/ $slt;
+				if($score_ratio >= $best_ratio) {
+					$best_ratio = $score_ratio;
+					$best_key = $k;
+				}
+
+				$lresults[$k] = iterative_ib($lc, $score['a'], $score['b']);;
+				$uresults[$k] = iterative_ib($uc, $score['a'], $score['b']);;
+			}
+		}
+
+		foreach($ptv as $k=>$p) {
+			$winner = "";
 			$p = trim($p);
 			if($p == '') continue;
+			if(isset($pms[md5($p)])) {
+				$score =($pms[md5($p)]);;
+				$slt = ($score['a']+$score['b']);
+				$score_ratio = $score['a']	/$slt;
+				$ratio_ratio = $score_ratio / $baseline_ratio;
+
+				$msg_type = null;
+
+
+				//if($msg_type != null) {
+
+				if($ratio_ratio > 0.9 && $ratio_ratio < 1.02) { 
+					$msg_type = null;
+				} else if($ratio_ratio>1) {
+					$msg_type = "success";
+					if($score_ratio == $best_ratio) 
+						$winner = "winner";
+				} else {
+					$msg_type = "fail";
+				}
+				if($msg_type != null) {
+					echo "<div class='iterative-message {$winner}' title='Some more conversion data?'>";
+					if($winner == "winner") { 
+						//echo "<img src='" . plugins_url("star_16.png", __FILE__)  . "'/>";
+					}
+					    echo "<span class='message ";
+						echo $msg_type;
+					    echo "'>"; 
+					    	if($debug)
+					    		echo $score['a'] . ":" . $score['b'] . " ";
+					    	echo round(abs($ratio_ratio - 1)*100) . "%";
+					    	echo ($ratio_ratio > 1) ? " better" : " worse";
+					    echo "</span>
+					    <br>";
+					    if($debug) {
+					    	echo "<span class='aside'>";
+					    	echo " BK: " . round($lresults[$best_key], 2) . ", " . round($uresults[$best_key], 2);
+					    	echo " CK: "  . round($lresults[$k], 2) . ", " . round($uresults[$k], 2);
+					    	echo "</span>";
+					    }
+
+						$mp = $lresults[$best_key] + (($lresults[$best_key] - $uresults[$best_key])/2);
+				    	
+					    		
+				    	echo "<span class='aside'";
+						if($uresults[$k] < $lresults[$best_key]) 
+				    		echo " title='We&rsquo;re confident this is not the best title.'>Very few users will see this.";
+				    	else if ($uresults[$k] > $lresults[$best_key] && $uresults[$k] < $mp) 
+					    	echo " title=''>We&rsquo;re still learning about this.";
+					    else if ($uresults[$k] > $mp && $uresults[$k] < $uresults[$best_key]) 
+					    	echo " title='This is performing well.'>Many users will see this.";
+					    else // this means we're in the extreme tail of the distribution
+					    	echo " title='This is the best title so far. We&rsquo;ll show this to most users.'>Most users will see this.";
+				    	echo "</span>";
+				  
+					    echo "
+					</div>";
+					$shown = true;
+				} else {
+					
+				}
+				//}
+				$winner = "";
+			}
 			echo '<input type="text" name="iterative_post_title_variants[]" size="30" value="' . $p . '" class="iterative-headline-variant" spellcheck="true" autocomplete="off">';	
 		}
 	}
 	echo '<input type="text" id="iterative_first_variant"  name="iterative_post_title_variants[]" size="30" value="" class="iterative-headline-variant" spellcheck="true" autocomplete="off">';
+	if($shown == false) {
+		//
+	}
+	echo '<div class="headline-tip" style="display:none; border:solid 1px #CCC; 
+    padding: 5px; color:white; background-color: #00a0d2; padding-left:10px; padding-right:10px;">
+    <img style="margin-top:3px;float:left;width:12px;padding-right:4px;" src="' . plugins_url("light_24.png", __FILE__)  . '" />
+    <div style="float:right; padding-left:5px; cursor:pointer;" class="dismiss">✓ ✗</div>
+    <div class="text"><strong>Suggestion:</strong> Use the word \'This\' in your headline to create a concrete image in your readers\' heads.</div>
+</div>';
+	shuffle($advice);
+	echo '<script type="text/javascript">
+		var advices = ' . json_encode($advice) . ';
+		jQuery(function() {
+			jQuery(".iterative-headline-variant").parent().on("change", ".iterative-headline-variant", (function() {
+				var titles = [];
+				jQuery(".iterative-headline-variant").each(function() {
+					if(jQuery(this).val() != "")
+						titles.push(jQuery(this).val());
+				});
+				// get new headlines
+				// get the stuff.
+				jQuery.ajax("' . IterativeAPI::getURL("advice") . '", {"data": {"variants": JSON.stringify(titles), "unique_id": "' . IterativeAPI::getGUID() . '"}}).done(function(success) {
+					console.log(success);
+					jQuery(".headline-tip").fadeOut(function() {
+						jQuery(".headline-tip .text").attr("x-id", 0);
+						advices = success["messages"]
+						iterativeStartAdvices();
+					});
+				});
+			}));
+			jQuery(".headline-tip .dismiss").click(function() {
+				jQuery(".headline-tip").fadeOut(function() {
+					var id = jQuery(".headline-tip .text").attr("x-id");
+					id++;
+					if(advices[id] != undefined) {
+						jQuery(".headline-tip .text").html(advices[id]);
+						jQuery(".headline-tip").fadeIn();
+						jQuery(".headline-tip .text").attr("x-id", id);
+					}
+				});
+			});
+			iterativeStartAdvices();
+		});
+			function iterativeStartAdvices() {
+				if(advices.length) { 
+					jQuery(".headline-tip .text").html(advices[0]).attr("x-id", 0);
+					jQuery(".headline-tip").fadeIn();
+				}
+			}
+	</script>';
 }

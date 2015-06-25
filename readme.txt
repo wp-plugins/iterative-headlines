@@ -1,13 +1,13 @@
 === The Best Title Testing Tool for WordPress ===
 Contributors: iterative
-Tags: title, testing, experiment, headline
+Tags: title, testing, experiment, headline, viral
 Requires at least: 3.0.1
 Tested up to: 4.2.2
 Stable tag: 1.0
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
-Use state-of-the-art artificial intelligence to find the perfect clickbait titles for maximum impact.
+Use state-of-the-art artificial intelligence to find the perfect clickbait titles.
 
 == Description ==
 
@@ -17,9 +17,9 @@ Over 80% of people exposed to your site will read your headlines. But for most s
  
 You don't need any math, any statistics, there's no "p values" or "z scores" or anything like that. Just put in your post titles and our plugin gets to work for you. Our artificial intelligence takes care of all the hard stuff behind the scenes.
 
-You've probably heard of A/B testing for this sort of thing. A/B testing is better than nothing, but it is very hard to get right -- most algorithms available today, do the math wrong, are hard to use and in general provide suboptimal results. Even if it were implemented perfectly, A/B testing is slow; it requires thousands of users to get meaningful results, and the results aren't available 'til after the test. In the meantime, you show suboptimal headlines to your users for a long time -- and then they're gone, off your site, never to return.
+You've probably heard of A/B testing for this sort of thing. A/B testing is better than nothing, but it is very hard to get right -- most algorithms available today, do the math wrong, are hard to use and in general provide inferior results. Even if it were implemented perfectly, A/B testing is slow: it requires thousands of users to get meaningful results, and the results aren't available until after the test. In the meantime, you waste a lot of resources on ordinary untested headlines to your users for a very long time -- and then they're gone, off your site, never to return.
 
-The algorithm we use in this plugin is our own secret blend of research from Stanford, Princeton and other leading colleges. The result is the ability to perform testing at a rate that works for even the smallest of sites: often, we can learn the best headlines in less than 100 views! This means that your users are quickly seeing the best headline, the one that attracts the most attention, gets the most clicks and keeps your readers around the longest.
+The algorithm we use in this plugin is our own secret blend of research from Stanford, Princeton and other leading colleges. The result is the ability to perform testing at a rate that works for even the smallest of sites: often, we can learn the best headlines in less than 50 views! This means that your users are quickly seeing the best headline, the one that attracts the most attention, gets the most clicks and keeps your readers around the longest.
 
 
 == Installation ==
@@ -28,7 +28,7 @@ This section describes how to install the plugin and get it working.
 
 1. Upload `iterative-headlines/` to the `wp-content/plugins/` directory.
 1. Activate the plugin through the 'Plugins' menu in WordPress
-1. Go to Settings > Iterative Headlines and select your goal.
+1. Go to Settings > Viral Headlines and select your goal.
 1. Begin writing posts. When you write a post, you'll be presented the option of picking multiple headlines. Specify up to 10 headlines per post and the algorithm will get to work deciding which one is the best!
 
 == Frequently Asked Questions ==

@@ -7,6 +7,9 @@ class IterativeAPI {
 	//		-> Variants, defined as md5(title)
 	// 			-> Receive probabilities for each variant.
 	private static $api_endpoint = "http://api.pathfinding.ca/";
+	public static function getURL($page) { 
+		return static::$api_endpoint . $page;
+	}
 	public static function getGUID() {
 		// if it isn't defined locally, get it from the server
 		$settings = get_option("iterative_settings");
@@ -39,11 +42,7 @@ class IterativeAPI {
 			return;
 
 		$unique_id = static::getGUID();
-		$settings = get_option("iterative_settings");
-		if(isset($settings['headlines']) && isset($settings['headlines']['goal']))
-			$type = $settings['headlines']['goal'];
-		else
-			$type = ITERATIVE_GOAL_CLICKS;
+		$type = static::getType();
 
 		$send = [];
 		foreach($variants as $k=>$v) {
@@ -53,8 +52,7 @@ class IterativeAPI {
 			$meta = [];
 		$parameters = ['experiment_id' => $post_id, 'unique_id' => $unique_id, 'type'=>$type, 'variants' => json_encode($send), 'meta' => json_encode($meta)];
 		$url_parameters = http_build_query($parameters);
-		
-
+	
 		$request = wp_remote_get(static::$api_endpoint . "experiment?" . $url_parameters);
 		//echo static::$api_endpoint . "experiment?" . $url_parameters;
 		
@@ -64,13 +62,29 @@ class IterativeAPI {
 		update_post_meta($post_id, "_iterative_parameters_{$type}", $response);
 		return $response;
 	}
-
-	public static function getParameters($post_id) {
+	public static function getType() {
 		$settings = get_option("iterative_settings");
 		if(isset($settings['headlines']) && isset($settings['headlines']['goal']))
 			$type = $settings['headlines']['goal'];
 		else
 			$type = ITERATIVE_GOAL_CLICKS;
+		return $type;
+	}
+
+        public static function getAdvice($post_id, $variants) {
+                $variants = json_encode($variants);
+                $type = static::getType();
+                $parameters = ['experiment_id' => $post_id, 'unique_id' => static::getGUID(), 'type'=>$type, 'variants'=>$variants];
+                $url_parameters = http_build_query($parameters);
+                $request = wp_remote_get(static::$api_endpoint . "advice?" . $url_parameters);
+                $response = json_decode(wp_remote_retrieve_body($request), true);
+                if(isset($response['parameters']) && !empty($response['parameters']))
+                        update_post_meta($post_id, "_iterative_parameters_{$type}", $response['parameters']);
+                return $response['messages'];
+        }
+
+	public static function getParameters($post_id) {
+		$type = static::getType();
 
 		// get the most recent parameters. if they don't exist, call serverProbabilities.
 		$post_meta = get_post_meta($post_id, "_iterative_parameters_{$type}", true);
@@ -78,6 +92,7 @@ class IterativeAPI {
 			return static::serverProbabilities($post_id, $type);
 		else return $post_meta;
 	}
+
 
 	private static function serverProbabilities($post_id, $type) {
 		// ask the server for the probabilities of each variant. store them.
@@ -95,7 +110,6 @@ class IterativeAPI {
 
 	public static function getVariantForUserID($post_id, $user_id) {
 		$variants = get_post_meta($post_id, "_iterative_variants", true);
-
 		if(isset($variants) && isset($variants[$user_id])) {
 			return $variants[$user_id];
 		} 
@@ -137,7 +151,7 @@ class IterativeAPI {
 					$parameters = IterativeAPI::updateExperiment($post_id, iterative_get_variants($post_id));
 				}
 
-				$draw = iterative_ib(iterative_urf($parameters[$vh]['c'],1), $parameters[$vh]['a'], $parameters[$vh]['c']);
+				$draw = iterative_ib(iterative_urf($parameters[$vh]['c'],1), $parameters[$vh]['a'], $parameters[$vh]['b']);
 				if($draw > $best)
 				{
 					$best = $draw;
@@ -147,6 +161,7 @@ class IterativeAPI {
 
 			$parameters = ['unique_id' => $unique_id, 'user'=>$user_id, 'variant'=>$best_hash, 'experiment_id' => $post_id];
 			$url_parameters = http_build_query($parameters);
+
 			wp_remote_get(static::$api_endpoint . "variant?" . $url_parameters);
 			static::storeVariantForUserID($post_id, $user_id, $best_hash);
 			return $best_hash;

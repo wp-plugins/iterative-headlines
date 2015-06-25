@@ -57,7 +57,7 @@ function iterative_register_admin_pointers( $p ) {
         'target' => '#iterative_first_variant',
         'options' => array(
             'content' => sprintf( '<h3> %s </h3> <p> %s </p>',
-                __( 'Iterative Headlines' ,'plugindomain'),
+                __( ITERATIVE_HEADLINES_BRANDING ,'plugindomain'),
                 __( 'Set up multiple post titles for testing here. You can have up to ten titles on each post: after an initial learning period, the best will be shown to your users. Learn more and configure what goal you wish to optimize for under <a href="options-general.php?page=headlines">Settings > Headlines</a>.','plugindomain')
             ),
             'position' => array( 'edge' => 'top', 'align' => 'left' )
