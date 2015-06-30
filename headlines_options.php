@@ -75,7 +75,10 @@ function iterative_radio_goal_render(  ) {
 		}
 	}
 	</script>
-	<p><label><input type='radio' class='headline-goal' name='iterative_settings[headlines][goal]' <?php checked( $options['headlines']['goal'], ITERATIVE_GOAL_CLICKS ); ?> value='<?php echo ITERATIVE_GOAL_CLICKS; ?>'> I want more of my readers to view my posts.</label></p>
+	<!-- premium. <p><label><input type='radio' class='headline-goal' name='iterative_settings[headlines][goal]' <?php checked( $options['headlines']['goal'], ITERATIVE_GOAL_CLICKS ); ?> value='<?php echo ITERATIVE_GOAL_CLICKS; ?>'> I want my posts to go viral! <strong>Get me more shares, links, readers and clicks.</strong> <small class="recommended">Recommended</small></label></p>
+	<p class='description headline-goal-description'>This.</p>-->
+	
+	<p><label><input type='radio' class='headline-goal' name='iterative_settings[headlines][goal]' <?php checked( $options['headlines']['goal'], ITERATIVE_GOAL_CLICKS ); ?> value='<?php echo ITERATIVE_GOAL_CLICKS; ?>'> I want more of my readers to read my posts.</label></p>
 	<p class='description headline-goal-description'>This will optimize your headlines to increase the number of users who click through from other pages on your site.</p>
 	<p><label><input type='radio' class='headline-goal' name='iterative_settings[headlines][goal]' <?php checked( $options['headlines']['goal'], ITERATIVE_GOAL_COMMENTS ); ?> value='<?php echo ITERATIVE_GOAL_COMMENTS; ?>'> I want my readers to comment on my posts.</label></p>
 	<p class='hidden description headline-goal-description'>This will optimize your headlines to pick the headline that attracts the most comments.</p>
@@ -124,7 +127,7 @@ function iterative_options_page(  ) {
 		}
 		.cta-top a { color:white; }
 		.cta-top a:hover { text-shadow:0 1px 8px rgba(0,0,0,0.498039) ;; }
-		.notyet,.premium {
+		.notyet,.premium,.recommended {
 		  border-radius:5px;
 		  font: normal normal bold 12px "Averia Sans Libre", Helvetica, sans-serif;
 		  padding:3px;
@@ -145,6 +148,11 @@ function iterative_options_page(  ) {
 		  background: -webkit-linear-gradient(-90deg, rgb(218,218,218) 0, rgb(157,157,157) 100%), rgb(218, 218, 218);
 		  background: -moz-linear-gradient(180deg, rgb(218,218,218) 0, rgb(157,157,157) 100%), rgb(218,218,218);
 		  background: linear-gradient(180deg, rgb(218,218,218) 0, rgb(157,157,157) 100%), rgb(218,218,218);
+		}
+		.recommended {
+		  background: -webkit-linear-gradient(180deg, rgb(23, 204, 8) 0, rgb(9, 119, 26) 100%), rgb(27, 169, 48);
+		  background: -moz-linear-gradient(180deg, rgb(23, 204, 8) 0, rgb(9, 119, 26) 100%), rgb(27, 169, 48);
+		  background: linear-gradient(180deg, rgb(23, 204, 8) 0, rgb(9, 119, 26) 100%), rgb(27, 169, 48);
 		}
 		.iterative { color: #d41f28; font-weight:bold; font-family:Helvetica, arial, sans; }
 		#iterative-branding {
