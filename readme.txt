@@ -15,11 +15,13 @@ Have you ever wondered how sites like Buzzfeed, Upworthy and the Huffington Post
 
 Over 80% of people exposed to your site will read your headlines. But for most sites, less than 20% of people will read the content. We've built a brand new algorithm for continuously improving your post titles to fix this problem.
  
-You don't need any math, any statistics, there's no "p values" or "z scores" or anything like that. Just put in your post titles and our plugin gets to work for you. Our artificial intelligence takes care of all the hard stuff behind the scenes.
+You don't need to know any math or statistics, there's no "sample sizes", "p values" or anything like that. Just put in your post titles and our plugin gets to work for you. Our artificial intelligence takes care of all the hard stuff, tuning your results instantly and entirely behind the scenes.
 
 You've probably heard of A/B testing for this sort of thing. A/B testing is better than nothing, but it is very hard to get right -- most algorithms available today, do the math wrong, are hard to use and in general provide inferior results. Even if it were implemented perfectly, A/B testing is slow: it requires thousands of users to get meaningful results, and the results aren't available until after the test. In the meantime, you waste a lot of resources on ordinary untested headlines to your users for a very long time -- and then they're gone, off your site, never to return.
 
-The algorithm we use in this plugin is our own secret blend of research from Stanford, Princeton and other leading colleges. The result is the ability to perform testing at a rate that works for even the smallest of sites: often, we can learn the best headlines in less than 50 views! This means that your users are quickly seeing the best headline, the one that attracts the most attention, gets the most clicks and keeps your readers around the longest.
+The algorithm we use in this plugin is our own secret blend of research from Stanford, Princeton and other leading colleges. The result is the ability to perform testing at a rate that works for even the smallest of sites: often, we can learn the best headlines in less than 50 views! This means that your users are quickly seeing the best headline, the one that attracts the most attention, gets the most clicks and keeps your readers around the longest. 
+
+Recent research from the University of Tokyo shows that on small websites (roughly, less than 1,000 views per article) this plugin achieves up to 57% better results than other methods of testing. On busier sites, the results are even more surprising. With testing, you *will* regularly see results up to 2,000% better (and often in surprising ways!) -- if you were to get a result that is 2,000% better (turning what would have been 1 visit in to 20 visits) with another solution, with Viral Headlines™ you would see a 3,508% improvement (turning 1 visit in to 35!). 
 
 
 == Installation ==
