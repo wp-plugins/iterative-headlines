@@ -53,6 +53,21 @@ function iterative_end_session() {
     session_destroy ();
 }
 
+add_action( 'admin_notices', 'iterative_admin_notices' );
+global $iterative_notices;
+$iterative_notices = array();
+function iterative_admin_notices() {
+	return;
+	global $iterative_notices;
+	foreach($iterative_notices as $in) {
+	?>
+		<div class="updated">
+		<p><?php _e( $in ); ?></p>
+		</div>
+	<?php
+	}
+}
+
 /* ====================================================
  * FILTERING AND TRACKING CODE
  * ==================================================== */
@@ -266,7 +281,7 @@ function iterative_add_headline_variants($post) {
 	@array_unshift($adviceTitles, $title);;
 	
 	$advice = (IterativeAPI::getAdvice($post->ID, $adviceTitles));
-	$pms = IterativeAPI::getParameters($post->ID);
+	$pms = IterativeAPI::getParameters($post->ID, 'sts');
 	if(isset($pms[md5($title)])) {
 		$baseline = $pms[md5($title)];
 		
