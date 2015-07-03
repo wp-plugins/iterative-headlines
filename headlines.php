@@ -4,7 +4,7 @@ Plugin Name: Viral Headlines&trade;
 Plugin URI: http://toolkit.iterative.ca/headlines/
 Description: Test your post titles and headlines with state-of-the-art artificial intelligence. 
 Author: Iterative Research Inc.
-Version: 1.2
+Version: 1.3
 Author URI: mailto:joe@iterative.ca
 License: GPLv2+
 */
@@ -15,6 +15,7 @@ $iterative_disable_title_filter = false;
 require_once dirname(__FILE__) . "/headlines_api.php";
 require_once dirname(__FILE__) . "/headlines_pointer.php";
 require_once dirname(__FILE__) . "/headlines_options.php";
+require_once dirname(__FILE__) . "/headlines_functions.php";
 require_once dirname(__FILE__) . "/headlines_calculator.php";
 
 define("ITERATIVE_HEADLINES_BRANDING", "Viral Headlines&trade;");
@@ -116,18 +117,17 @@ function iterative_get_variants($post_id) {
 }
 
 function iterative_add_javascript() {
-	//if(!is_admin()) {
+	if(!is_admin()) {
 		echo "<script type='text/javascript' src='" . IterativeAPI::getTrackerURL() . "'></script>";
 
 		// record a click conversion
 
-		if(is_single() && parse_url(wp_get_referer(), PHP_URL_HOST)	== parse_url($_SERVER["HTTP_HOST"], PHP_URL_HOST)) {
+		if(is_single() && (iterative_get_referring_host() == iterative_remove_www(parse_url($_SERVER["HTTP_HOST"], PHP_URL_HOST)))) {
 			global $post;
 			$id = $post->ID;
 			$variants = iterative_get_variants($id);
 
 			$variant = IterativeAPI::selectVariant($id, array_keys($variants));
-			
 			if(count($variants) >= 1) {
 				echo "<script type='text/javascript' src='" . IterativeAPI::getSuccessURL(ITERATIVE_GOAL_CLICKS, $variant, $id) . "'></script>";
 			}
@@ -145,7 +145,7 @@ function iterative_add_javascript() {
 			}
 			unset($_SESSION['iterative_comments_posted']);
 		}
-	//}
+	}
 }
 
 add_filter('preprocess_comment', function($comment) {
@@ -167,15 +167,14 @@ add_filter('preprocess_comment', function($comment) {
 function iterative_save_headline_variants( $post_id, $post, $update ) {
     if ( isset( $_REQUEST['iterative_post_title_variants'] ) ) {
     	$result = array();
+
     	foreach($_REQUEST['iterative_post_title_variants'] as $iptv) {
     		$iptv = trim($iptv);
     		if($iptv == '')
     			continue;
     		$result[] = $iptv;
     	}
-    	
-    	if(!empty($result))
-        	update_post_meta( $post_id, 'iterative_post_title_variants', $result); // ( $_REQUEST['iterative_post_title_variants'] ) );
+        update_post_meta( $post_id, 'iterative_post_title_variants', $result); // ( $_REQUEST['iterative_post_title_variants'] ) );
     }
 
     IterativeAPI::updateExperiment($post_id, iterative_get_variants($post_id), (array)$post);

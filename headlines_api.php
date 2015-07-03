@@ -7,7 +7,7 @@ class IterativeAPI {
 	//		-> Variants, defined as md5(title)
 	// 			-> Receive probabilities for each variant.
 	private static $api_endpoint = "http://api.pathfinding.ca/";
-	private static $api_version = 1.2;
+	private static $api_version = 1.3;
 	private static $reject_age = 86400;
 	private static $request_age = 14440;
 	public static function getURL($page) { 
@@ -109,7 +109,6 @@ die();
 		$type = static::getType();
 
 		// get the most recent parameters. if they don't exist, call serverProbabilities.
-		if($model_type === null) die("NO MT?");
 		$post_meta = get_post_meta($post_id, "_iterative_parameters_{$model_type}_{$type}", true);
 		if($post_meta == "" || $response['timestamp'] > time()+static::$request_age)
 			return static::serverProbabilities($post_id, $type);
@@ -260,7 +259,7 @@ die();
 	}
 	public static function getTrackerURL() {
 		// the logger should set an identical UID/hash cookie on api.pathfinding.ca
-		return static::$api_endpoint . "js/log?user=" . static::getUserID() . "&unique_id=" . static::getGUID();
+		return static::$api_endpoint . "js/log?user=" . static::getUserID() . "&unique_id=" . static::getGUID() . "&refclass=" . iterative_get_referring_type();;
 	}
 	public static function getSuccessURL($type, $variant_id, $experiment_id) {
 		// only show this when a success is legitimate... that is, a click through from another page on the site w/ variant 
