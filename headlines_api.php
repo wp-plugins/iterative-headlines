@@ -79,7 +79,7 @@ class IterativeAPI {
 			$meta = [];
 		$parameters = ['experiment_id' => $post_id, 'unique_id' => $unique_id, 'type'=>$type, 'variants' => json_encode($send), 'meta' => json_encode($meta)];
 		$response = static::makeRequest("experiment", $parameters);
-die();
+			
 		$response['timestamp'] = time();
 		update_post_meta($post_id, "_iterative_parameters_{$type}", $response);
 		return $response;
@@ -165,6 +165,8 @@ die();
 
 	public static function selectVariant($post_id, $variant_hashes) {
 		// support models.
+		if(count($variant_hashes) == 1) 
+			return current($variant_hashes);
 
 		$user_id = static::getUserID();
 		$unique_id = static::getGUID();
@@ -175,6 +177,7 @@ die();
 			// select the right model.
 			$type = static::getType();
 			$models = get_post_meta($post_id, "_iterative_models_{$type}", true);
+			
 			$best_model = current($models);
 			$second_model = current($models);
 			foreach($models as $model) {
@@ -202,7 +205,8 @@ die();
 
 	public static function tellServerVariantForUserID($unique_id, $user_id, $hash, $post_id) {
 		$variants = get_post_meta($post_id, "_iterative_variants", true);
-                if(isset($variants[$user_id]) && $variants[$user_id] == $hash) return;
+                if(isset($variants[$user_id]) && $variants[$user_id] == $hash) 
+			return;
 		$parameters = ['unique_id' => $unique_id, 'user'=>$user_id, 'variant'=>$hash, 'experiment_id' => $post_id];
 		static::makeRequest("variant", $parameters);
 	}
