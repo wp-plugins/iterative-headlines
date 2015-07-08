@@ -57,7 +57,7 @@ class IterativeAPI {
 	}
 	
 	private static function serverGUID($meta=null) {
-		$response = makeRequest("unique", array('meta' => json_encode($meta)));
+		$response = static::makeRequest("unique", array('meta' => json_encode($meta)));
 		return $response['unique_id'];
 	}
 
