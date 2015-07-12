@@ -1,10 +1,10 @@
 <?php
 /*
 Plugin Name: Viral Headlines&trade;
-Plugin URI: http://toolkit.iterative.ca/headlines/
+Plugin URI: http://www.viralheadlines.net/
 Description: Test your post titles and headlines with state-of-the-art artificial intelligence. 
 Author: Iterative Research Inc.
-Version: 1.3
+Version: 1.4
 Author URI: mailto:joe@iterative.ca
 License: GPLv2+
 */
@@ -21,6 +21,9 @@ require_once dirname(__FILE__) . "/headlines_calculator.php";
 define("ITERATIVE_HEADLINES_BRANDING", "Viral Headlines&trade;");
 define("ITERATIVE_GOAL_CLICKS", 1);
 define("ITERATIVE_GOAL_COMMENTS", 4);
+define("ITERATIVE_GOAL_VIRALITY", 8);
+define("ITERATIVE_GET_PARAMETER", "ivh");
+define("ITERATIVE_ENABLE_GET_PARAMETER", false);
 
 /* ====================================================
  * HOOKS AND FILTERS
@@ -28,10 +31,10 @@ define("ITERATIVE_GOAL_COMMENTS", 4);
 
 add_action( 'admin_menu', 'iterative_add_admin_menu' );
 add_action( 'admin_init', 'iterative_settings_init' );
-add_filter( 'enter_title_here', function() { return __("Enter primary title here"); });
+add_filter( 'enter_title_here', function() { return __("Enter primary headline here"); });
 add_action( 'edit_form_before_permalink', "iterative_add_headline_variants");
 add_action( 'save_post', 'iterative_save_headline_variants', 10, 3 );
-add_filter( 'the_title', 'iterative_change_title', 10, 2 );
+add_filter( 'the_title', 'iterative_change_headline', 10, 2 );
 add_action( 'wp_footer', 'iterative_add_javascript', 25 );	// must be higher than 20
 
 add_action('init', 'iterative_start_session', 1);
@@ -45,20 +48,21 @@ add_action('wp_login', 'iterative_end_session');
 
 function iterative_start_session() {
 	ob_start();
-    if(!session_id()) {
-        session_start();
-    }
+	if(!session_id()) {
+		session_start();
+	}
 }
 
 function iterative_end_session() {
-    session_destroy ();
+	session_destroy ();
 }
 
 add_action( 'admin_notices', 'iterative_admin_notices' );
 global $iterative_notices;
 $iterative_notices = array();
 function iterative_admin_notices() {
-	return;
+	return;	// for now, we can just output these immediately.
+
 	global $iterative_notices;
 	foreach($iterative_notices as $in) {
 	?>
@@ -72,42 +76,94 @@ function iterative_admin_notices() {
 /* ====================================================
  * FILTERING AND TRACKING CODE
  * ==================================================== */
-function iterative_change_title( $title, $id = null ) {
-	// look up the iterative_post_title_variants and pick the right one.
-	if(is_admin()) return $title;
+global $iterative_selected;
+$iterative_selected = array();
+function iterative_change_headline($title, $id=null) {
+	// why is ID null? it cannot be null.
+	if($id === null) {
+		global $post;
+		$id = $post->ID;
+	}
+
+	return iterative_change_thing($title, $id, "headlines");
+}
+
+function iterative_change_thing( $original_thing, $id = null, $experiment_type="headlines", $model_type=null) {
+	global $iterative_disable_title_filter;
+	
+	if(is_admin() || $iterative_disable_title_filter) return $original_thing;
 	$settings = get_option("iterative_settings");
 	if(!isset($settings['headlines']['testing']) || $settings['headlines']['testing'] == 1) {}
-	else { return $title; }
+	else { return $original_thing; }
+	
+	$variants = iterative_get_variants($id, $experiment_type);
+	if($variants === null || count($variants) <= 1)
+		return $original_thing;
 
-	global $iterative_disable_title_filter;
-	if($iterative_disable_title_filter)
-		return $title;
+	$selected = null;
+	if($experiment_type === "headlines" && isset($_GET[ITERATIVE_GET_PARAMETER])) {
+		// TODO: in the future (and pro only, as the benefit requires the pro API), 
+		// consider storing extra data in that get parameter like CFs.
 
-	$variants = iterative_get_variants($id);
-	if($variants === null)
-		return $title;
+		// exit from the URL if available
+		if(isset($variants[$_GET[ITERATIVE_GET_PARAMETER]])) {
+			$selected = $_GET[ITERATIVE_GET_PARAMETER];
+		} else {
+			unset($_GET[ITERATIVE_GET_PARAMETER]);
+		}
+	}
 
-	if(count($variants) <= 1)
-		return $title;
+	if($selected == null) {
+		// look up the _iterative_headline_variants and pick the right one.
+		$selected = IterativeAPI::selectVariant($id, array_keys($variants), $experiment_type, $model_type);
+		if($selected === null || !isset($variants[$selected]))
+			return $original_thing;
+	}
+	// store here for page load so we don't have to trust the API (in case of fallback mode or temporary model)
+	global $iterative_selected;	
+	$iterative_selected[$id] = $selected;
 
-	$selected = IterativeAPI::selectVariant($id, array_keys($variants));
-	if($selected === null)
-		return $title;
-
-    return $variants[$selected];
+	return $variants[$selected];
 }	
 
-function iterative_get_variants($post_id) {
-	global $iterative_disable_title_filter;
-	$iterative_disable_title_filter = true;
+function iterative_get_variants($post_id, $experiment_type='headlines', $include_default = true) {
 	
-	$ptv = get_post_meta( $post_id, 'iterative_post_title_variants', true);
-	$title = get_the_title($post_id);
+	if($experiment_type == 'headlines') {
+		global $iterative_disable_title_filter;
+		$iterative_disable_title_filter = true;
+	
+		// DEPRECATE: in 1.5 remove this.
+		$old = (array) get_post_meta($post_id, "iterative_post_title_variants", true);
+		$new = (array) get_post_meta( $post_id, '_iterative_headline_variants', true);	
+		$ptv = $new + $old;
 
-	$iterative_disable_title_filter = false;
+		$title = get_the_title($post_id);
+		if($include_default)
+			$ptv[] = $title;
+	
+		$iterative_disable_title_filter = false;
+	} else {
+		$field = substr($experiment_type, 0, strlen($experiment_type)-1);
+		$disable_variable = "iterative_disable_" . $field . "_filter";
+		global $$disable_variable;
+		$$disable_variable = true;
+		$methods = array("iterative_get_the_$field", "get_the_$field", "get_$field");
+		foreach($methods as $method) {
+			if(function_exists($method)) {
+				$field_value = $method($post_id);
+				break;
+			}
+		}
 
-	$ptv[] = $title;
-	$return = [];
+		$ptv = get_post_meta($post_id, "_iterative_" . $field . "_variants", true);
+		if($include_default)
+			if(isset($field_value))
+				$ptv[] = $field_value;
+		
+		$$disable_variable = false;
+	}
+
+	$return = array();
 	foreach($ptv as $entry) {
 		if($entry == "") continue;
 		$return[md5($entry)] = $entry;
@@ -121,15 +177,54 @@ function iterative_add_javascript() {
 		echo "<script type='text/javascript' src='" . IterativeAPI::getTrackerURL() . "'></script>";
 
 		// record a click conversion
-
-		if(is_single() && (iterative_get_referring_host() == iterative_remove_www(parse_url($_SERVER["HTTP_HOST"], PHP_URL_HOST)))) {
-			global $post;
-			$id = $post->ID;
-			$variants = iterative_get_variants($id);
-
-			$variant = IterativeAPI::selectVariant($id, array_keys($variants));
+		global $post;
+		$id = $post->ID;
+		global $iterative_selected;
+	
+		if(is_single() && isset($iterative_selected[$id])) {
+			$variants = iterative_get_variants($id); 
+			$variant = $iterative_selected[$id];
+			//$variant = IterativeAPI::selectVariant($id, array_keys($variants));
 			if(count($variants) >= 1) {
-				echo "<script type='text/javascript' src='" . IterativeAPI::getSuccessURL(ITERATIVE_GOAL_CLICKS, $variant, $id) . "'></script>";
+				if((iterative_get_referring_host() == iterative_remove_www(parse_url($_SERVER["HTTP_HOST"], PHP_URL_HOST))))
+					echo "<script type='text/javascript' src='" . IterativeAPI::getSuccessURL(ITERATIVE_GOAL_CLICKS, $variant, $id) . "'></script>";
+				else if(isset($_GET[ITERATIVE_GET_PARAMETER])) { // off site referrer but saw fixed title.
+
+					echo "<script type='text/javascript' src='" . IterativeAPI::getSuccessURL(ITERATIVE_GOAL_VIRALITY, $variant, $id) . "'></script>";
+				}
+			}
+
+			if(ITERATIVE_ENABLE_GET_PARAMETER) {
+				// set state as a URL parameter.
+				echo "<script type='text/javascript'>
+				(function() {
+					function updateURLParameter(url, param, paramVal){
+					    var newAdditionalURL = '';
+					    var tempHashArray = url.split('#');
+					    var tempArray = tempHashArray[0].split('?');
+					    var baseURL = tempArray[0];
+					    var additionalURL = tempArray[1];
+					    var temp = '';
+					    if (additionalURL) {
+					        tempArray = additionalURL.split('&');
+					        for (i=0; i<tempArray.length; i++){
+					            if(tempArray[i].split('=')[0] != param){
+					                newAdditionalURL += temp + tempArray[i];
+					                temp = '&';
+					            }
+					        }
+					    }
+
+					    var rows_txt = temp + '' + param + '=' + paramVal;
+					    var newURL = baseURL + '?' + newAdditionalURL + rows_txt;
+					    if(tempHashArray.length > 1) {
+					    	newURL += '#' + tempHashArray[1];
+					    }
+					    return newURL;
+					}
+					var newURL = updateURLParameter(window.location.href, '" . ITERATIVE_GET_PARAMETER . "', '{$variant}');
+					window.history.replaceState({}, '', newURL);
+				})();</script>";
 			}
 		}
 
@@ -145,6 +240,8 @@ function iterative_add_javascript() {
 			}
 			unset($_SESSION['iterative_comments_posted']);
 		}
+
+
 	}
 }
 
@@ -164,107 +261,49 @@ add_filter('preprocess_comment', function($comment) {
  * 	$title_placeholder = apply_filters( 'enter_title_here', __( 'Enter title here' ), $post );
  * 	do_action( 'edit_form_before_permalink', $post );
  * ==================================================== */
-function iterative_save_headline_variants( $post_id, $post, $update ) {
-    if ( isset( $_REQUEST['iterative_post_title_variants'] ) ) {
+function iterative_save_headline_variants($post_id, $post, $update) {
+	return iterative_save_variants($post_id, $post, $update, "headlines");
+}
+
+function iterative_save_variants( $post_id, $post, $update, $experiment_type="headlines") {
+    $field = substr($experiment_type, 0, strlen($experiment_type)-1);
+    if ( isset( $_REQUEST['iterative_'. $field . '_variants'] ) ) {
     	$result = array();
 
-    	foreach($_REQUEST['iterative_post_title_variants'] as $iptv) {
+    	foreach($_REQUEST['iterative_' . $field . '_variants'] as $iptv) {
     		$iptv = trim($iptv);
     		if($iptv == '')
     			continue;
     		$result[] = $iptv;
     	}
-        update_post_meta( $post_id, 'iterative_post_title_variants', $result); // ( $_REQUEST['iterative_post_title_variants'] ) );
+        update_post_meta( $post_id, '_iterative_' . $field . '_variants', $result); // ( $_REQUEST['iterative_post_title_variants'] ) );
     }
 
-    IterativeAPI::updateExperiment($post_id, iterative_get_variants($post_id), (array)$post);
+    if($experiment_type === "headlines") {
+	$meta = array(
+                'post_type'=>$post->post_type,
+                'comment_count'=>$post->comment_count,
+                'ID' => $post->ID,
+                'post_author' => $post->post_author,
+                'post_date' => $post->post_date,
+                'post_status' => $post->post_status
+	);
+    } else {
+	$meta = array();
+    }
+
+    IterativeAPI::updateExperiment($post_id, iterative_get_variants($post_id, $experiment_type), $meta);
 }
 
+
+
+// TODO: refactor this, it also handles excerpts in pro... rename it, probably pull it out in to another file
 function iterative_add_headline_variants($post) {
-	echo "<style type='text/css'>
-	.iterative-headline-variant { 
-		padding: 3px 8px;
-		padding-left: 37px;
-	    font-size: 1.7em;
-	    line-height: 100%;
-	    height: 1.7em;
-	    width: 100%;
-	    outline: 0;
-	    margin: 0 0 3px;
-	    background-color: #fff;
-	    background-image:url(" . plugins_url("atom_24.png", __FILE__) . ");
-	    background-position: 6px 6px; 
-	    background-repeat: no-repeat;
-	}
-	.iterative-message { 
-		position: relative;
-	    text-align: right;
-	    top: 7px;
-	    right: 8px;
-	    height: 0px;
-	    font-size: 10px;
-	    line-height: 14px; 
-	    cursor:pointer;
-	    opacity:0.4;
-	}
-	.iterative-message:hover { opacity:1; }
-
-	.iterative-message.up { 
-		top:-27px;
-	}
-	.iterative-message.winner { opacity: 1; }
-	.iterative-message.winner:hover { opacity:0.5; }
-	.iterative-message span.message { 
- 		color: white;
-	    font-weight: bolder;
-	    padding: 2px;
-	    border-radius: 5px;
-	    padding-left: 5px;
-	    padding-right: 5px;
-	}
-    .iterative-message span.message.success {
-    	background-color: hsl(94, 61%, 44%);
-    }
-
-    .iterative-message span.message.fail {
-		background-color: hsl(0, 61%, 44%);
-    }
-    .iterative-message span.message.baseline {
-   	    background-color: #777;
-    }
-    .iterative-message span.aside {
-    	color:#CCC;
-    	background-color:white; 
-    	border-radius:5px;
-    	top:2px; position:relative;
-    	padding:0px;padding-bottom:0; padding-left:5px; padding-right:5px;
-    }
-    </style><script type='text/javascript'>
+	echo "<link rel='stylesheet' href='" . plugins_url("css/admin.css", __FILE__) . "' />
+    	<script type='text/javascript' src='" . plugins_url( 'js/duplicable.js', __FILE__ ) . "'></script>
+	<script type='text/javascript'>
 	jQuery(function() {
-		jQuery('.iterative-headline-variant').parent().on('keyup', '.iterative-headline-variant', (function() {
-			var empties = false;
-			jQuery('.iterative-headline-variant').each(function() {
-				if(jQuery(this).val() == '') {
-					if(!empties) {
-						empties = true;
-						return;
-					} else {
-						
-						jQuery(this).remove();
-					}
-				}
-
-			});
-			
-			if(!empties) {
-				if(jQuery('.iterative-headline-variant').length < 9) 
-				{
-					var thing = jQuery('.iterative-headline-variant:first').clone().val('').attr('id', '');
-					thing.insertAfter(jQuery('.iterative-headline-variant:last'));
-			
-				}	
-			}
-		}));
+		duplicable('.iterative-headline-variant', 9);
 	});
 	</script>";
 
@@ -273,141 +312,152 @@ function iterative_add_headline_variants($post) {
 	$debug = false;
 
 	$title = trim(get_the_title($post->ID));
-	$ptv = get_post_meta( $post->ID, 'iterative_post_title_variants', true);   
 
-	$type = IterativeAPI::getType();
- 	$adviceTitles = $ptv;
-	@array_unshift($adviceTitles, $title);;
+	// DEPRECATE: in 1.5 remove this
+	$old = (array) get_post_meta($post->ID, "iterative_post_title_variants", true);
+	$new = (array) get_post_meta($post->ID, '_iterative_headline_variants', true);
+	$ptv = $new + $old;
+	$ptv = array_filter($ptv);
+	if(count($ptv) > 0) {
+		$type = IterativeAPI::getType();
+ 		$adviceTitles = $ptv;
+		@array_unshift($adviceTitles, $title);;
 	
-	$advice = (IterativeAPI::getAdvice($post->ID, $adviceTitles));
-	$pms = IterativeAPI::getParameters($post->ID, 'sts');
-	if(isset($pms[md5($title)])) {
-		$baseline = $pms[md5($title)];
-		
-		$blt = $baseline['a']+$baseline['b'];
-		$baseline_ratio = $baseline['a']/$blt;
+		$advice = (IterativeAPI::getAdvice($post->ID, $adviceTitles));
+		$pms = IterativeAPI::getParameters($post->ID, 'sts');
+		if(isset($pms[md5($title)])) {
+			$baseline = $pms[md5($title)];
+	
+			$blt = $baseline['a']+$baseline['b'];
+			$baseline_ratio = $baseline['a']/$blt;
 
+		}
 	}
-
 	echo "
-		<div class='iterative-message up' title='Some more conversion data?'>
+		<div class='iterative-message up'>
 		    <span class='message baseline'>";
 		    if($debug) { echo "{$baseline['a']}:{$baseline['b']} "; }
 		    echo "Baseline</span>
-		    <br>
+		    <br />
 		    <!--<span class='aside'>311 users have seen this</span>-->
 		</div>
 	";
 	//placeholder="Enter experimental title variant."
 	// reload these.
 
-	$shown = false;	
-	$best_ratio = 0;
-	$best_key = null;
-	$number_same = 0;
-	$uresults = $lresults = array();
-	if(is_array($ptv)) {
-		foreach($ptv as $k=>$p) {
-			$p = trim($p);
-			if($p == '') { unset($p); continue; }
-			if(isset($pms[md5($p)])) {
-				$score =($pms[md5($p)]);
-				$slt = ($score['a']+$score['b']);
-				$score_ratio = $score['a']	/ $slt;
-				if($score_ratio >= $best_ratio) {
-					$best_ratio = $score_ratio;
-					$best_key = $k;
-				}
-
-				$lresults[$k] = iterative_ib($lc, $score['a'], $score['b']);;
-				$uresults[$k] = iterative_ib($uc, $score['a'], $score['b']);;
-			}
-		}
-
-		foreach($ptv as $k=>$p) {
-			$winner = "";
-			$p = trim($p);
-			if($p == '') continue;
-			if(isset($pms[md5($p)])) {
-				$score =($pms[md5($p)]);;
-				$slt = ($score['a']+$score['b']);
-				$score_ratio = $score['a']	/$slt;
-				$ratio_ratio = $score_ratio / $baseline_ratio;
-
-				$msg_type = null;
-
-
-				//if($msg_type != null) {
-
-				if($ratio_ratio > 0.9 && $ratio_ratio < 1.02) { 
-					$msg_type = null;
-				} else if($ratio_ratio>1) {
-					$msg_type = "success";
-					if($score_ratio == $best_ratio) 
-						$winner = "winner";
-				} else {
-					$msg_type = "fail";
-				}
-				if($msg_type != null) {
-					echo "<div class='iterative-message {$winner}' title='Some more conversion data?'>";
-					if($winner == "winner") { 
-						//echo "<img src='" . plugins_url("star_16.png", __FILE__)  . "'/>";
+	if(count($ptv) > 0) {
+		$shown = false;	
+		$best_ratio = 0;
+		$best_key = null;
+		$number_same = 0;
+		$uresults = $lresults = array();
+		if(is_array($ptv)) {
+			foreach($ptv as $k=>$p) {
+				$p = trim($p);
+				if($p == '') { unset($p); continue; }
+				if(isset($pms[md5($p)])) {
+					$score =($pms[md5($p)]);
+					$slt = ($score['a']+$score['b']);
+					$score_ratio = $score['a']	/ $slt;
+					if($score_ratio >= $best_ratio) {
+						$best_ratio = $score_ratio;
+						$best_key = $k;
 					}
-					    echo "<span class='message ";
-						echo $msg_type;
-					    echo "'>"; 
-					    	if($debug)
-					    		echo $score['a'] . ":" . $score['b'] . " ";
-					    	echo round(abs($ratio_ratio - 1)*100) . "%";
-					    	echo ($ratio_ratio > 1) ? " better" : " worse";
-					    echo "</span>
-					    <br>";
-					    if($debug) {
-					    	echo "<span class='aside'>";
-					    	echo " BK: " . round($lresults[$best_key], 2) . ", " . round($uresults[$best_key], 2);
-					    	echo " CK: "  . round($lresults[$k], 2) . ", " . round($uresults[$k], 2);
-					    	echo "</span>";
-					    }
+
+					$lresults[$k] = iterative_ib($lc, $score['a'], $score['b']);;
+					$uresults[$k] = iterative_ib($uc, $score['a'], $score['b']);;
+				}
+			}
+
+			foreach($ptv as $k=>$p) {
+				$winner = "";
+				$p = trim($p);
+				if($p == '') continue;
+				if(isset($pms[md5($p)])) {
+					$score =($pms[md5($p)]);;
+					$slt = ($score['a']+$score['b']);
+					$score_ratio = $score['a']	/$slt;
+					$ratio_ratio = $score_ratio / $baseline_ratio;
+
+					$msg_type = null;
+
+
+					//if($msg_type != null) {
+
+					if($ratio_ratio > 0.9 && $ratio_ratio < 1.02) { 
+						$msg_type = null;
+					} else if($ratio_ratio>1) {
+						$msg_type = "success";
+						if($score_ratio == $best_ratio) 
+							$winner = "winner";
+					} else {
+						$msg_type = "fail";
+					}
+					if($msg_type != null) {
+						echo "<div class='iterative-message {$winner}' title='In the pro version, the best per-user title will be delivered: this means mobile users from Canada may see a different title than Mac OS users in California.'>";
+						if($winner == "winner") { 
+							//echo "<img src='" . plugins_url("star_16.png", __FILE__)  . "'/>";
+						}
+						echo "<span class='message ";
+							echo $msg_type;
+						echo "'>"; 
+						if($debug)
+							echo $score['a'] . ":" . $score['b'] . " ";
+						echo round(abs($ratio_ratio - 1)*100) . "%";
+						echo ($ratio_ratio > 1) ? " better" : " worse";
+						echo "</span><br />";
+						if($debug) {
+							echo "<span class='aside'>";
+							echo " BK: " . round($lresults[$best_key], 2) . ", " . round($uresults[$best_key], 2);
+							echo " CK: "  . round($lresults[$k], 2) . ", " . round($uresults[$k], 2);
+							echo "</span>";
+						}
 
 						$mp = $lresults[$best_key] + (($lresults[$best_key] - $uresults[$best_key])/2);
-				    	
+						
 					    		
-				    	echo "<span class='aside'";
+						echo "<span class='aside'";
 						if($uresults[$k] < $lresults[$best_key]) 
-				    		echo " title='We&rsquo;re confident this is not the best title.'>Very few users will see this.";
-				    	else if ($uresults[$k] > $lresults[$best_key] && $uresults[$k] < $mp) 
-					    	echo " title=''>We&rsquo;re still learning about this.";
-					    else if ($uresults[$k] > $mp && $uresults[$k] < $uresults[$best_key]) 
-					    	echo " title='This is performing well.'>Many users will see this.";
-					    else // this means we're in the extreme tail of the distribution
-					    	echo " title='This is the best title so far. We&rsquo;ll show this to most users.'>Most users will see this.";
-				    	echo "</span>";
+							echo " title='We&rsquo;re confident this is not the best title.'>Very few users will see this.";
+						else if ($uresults[$k] > $lresults[$best_key] && $uresults[$k] < $mp) 
+							echo " title=''>We&rsquo;re still learning about this.";
+						else if ($uresults[$k] > $mp && $uresults[$k] < $uresults[$best_key] && $ratio_ratio > 1) 
+							echo " title='This is performing well.'>Many users will see this.";
+						else if($ratio_ratio > 1) // this means we're in the extreme tail of the distribution
+							echo " title='This is the best title so far. We&rsquo;ll show this to most users.'>Most users will see this.";
+						else echo "></span>";
+						echo "</span>";
 				  
-					    echo "
-					</div>";
-					$shown = true;
-				} else {
-					
+						echo "</div>";
+						$shown = true;
+					} else {	
+					}
+					//}
+					$winner = "";
 				}
-				//}
-				$winner = "";
+				echo '<input type="text" name="iterative_headline_variants[]" size="30" value="' . $p . '" class="iterative-headline-variant" spellcheck="true" autocomplete="off">';	
 			}
-			echo '<input type="text" name="iterative_post_title_variants[]" size="30" value="' . $p . '" class="iterative-headline-variant" spellcheck="true" autocomplete="off">';	
 		}
 	}
-	echo '<input type="text" id="iterative_first_variant"  name="iterative_post_title_variants[]" size="30" value="" class="iterative-headline-variant" spellcheck="true" autocomplete="off">';
+	echo '<input type="text" id="iterative_first_variant"  name="iterative_headline_variants[]" size="30" value="" class="iterative-headline-variant" spellcheck="true" autocomplete="off">';
 	if($shown == false) {
-		//
-	}
-	echo '<div class="headline-tip" style="display:none; border:solid 1px #CCC; 
-    padding: 5px; color:white; background-color: #00a0d2; padding-left:10px; padding-right:10px;">
-    <img style="margin-top:3px;float:left;width:12px;padding-right:4px;" src="' . plugins_url("light_24.png", __FILE__)  . '" />
-    <div style="float:right; padding-left:5px; cursor:pointer;" class="dismiss">✓ ✗</div>
-    <div class="text"><strong>Suggestion:</strong> Use the word \'This\' in your headline to create a concrete image in your readers\' heads.</div>
-</div>';
-	shuffle($advice);
+			//
+		}
+		echo '<div class="headline-tip" style="display:none; border:solid 1px #CCC; padding: 5px; color:white; background-color: #00a0d2; padding-left:10px; padding-right:10px;">
+			<img style="margin-top:3px;float:left;width:12px;padding-right:4px;" src="' . plugins_url("light_24.png", __FILE__)  . '" />
+			<div style="float:right; padding-left:5px; cursor:pointer;" class="dismiss">✓ ✗</div>
+			<div class="text"><strong>Suggestion:</strong> Use the word \'This\' in your headline to create a concrete image in your readers\' heads.</div>
+		</div>';
+		if(is_array($advice))
+			shuffle($advice);
 	echo '<script type="text/javascript">
 		var advices = ' . json_encode($advice) . ';
+		var iterativeStartAdvices = function() {
+			if(advices && advices.length) { 
+				jQuery(".headline-tip .text").html(advices[0]).attr("x-id", 0);
+				jQuery(".headline-tip").fadeIn();
+			}
+		}
 		jQuery(function() {
 			jQuery(".iterative-headline-variant").parent().on("change", ".iterative-headline-variant", (function() {
 				var titles = [];
@@ -439,11 +489,5 @@ function iterative_add_headline_variants($post) {
 			});
 			iterativeStartAdvices();
 		});
-			function iterativeStartAdvices() {
-				if(advices.length) { 
-					jQuery(".headline-tip .text").html(advices[0]).attr("x-id", 0);
-					jQuery(".headline-tip").fadeIn();
-				}
-			}
 	</script>';
 }
