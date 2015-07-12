@@ -384,7 +384,7 @@ function iterative_add_headline_variants($post) {
 
 					//if($msg_type != null) {
 
-					if($ratio_ratio > 0.9 && $ratio_ratio < 1.02) { 
+					if($slt <= 2 || ($ratio_ratio > 0.9 && $ratio_ratio < 1.02)) { 
 						$msg_type = null;
 					} else if($ratio_ratio>1) {
 						$msg_type = "success";
