@@ -70,11 +70,17 @@ You can email me at joe@iterative.ca — I'm happy to chat about optimizing your
 = 1.0 =
 * First release!
 
-= 1.1 = 
+= 1.1 - 1.3 = 
 * Bug fixes.
 
 = 1.2 =
 * New API compatibility. Speed improvements.
+
+= 1.3 =
+* Various changes.
+
+= 1.4 =
+* Full port to the new API, many bug fixes. Complete rewrite of much of the backend. Much faster, much more stable.
  
 == Upgrade Notice ==
 
@@ -83,3 +89,6 @@ This is the initial release.
 
 = 1.2 =
 Much faster. The plugin now caches all results locally and no longer has any major effect on load time. Also, full support for UTF-8.
+
+= 1.4 = 
+Fixing some core bugs on fresh sites. All users are brought to the latest version of the API as well, which provides more flexibility and speed as well as an improved algorithm.
