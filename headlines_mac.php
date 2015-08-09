@@ -51,7 +51,7 @@ class Iterative_MACComputer {
     $hash = static::hash($ciphertext, $key);
     if($hash === false)
        throw new RuntimeException("Cowardly refusing to return ciphertext when hash calculation fails. Check that the appropriate HMAC algorithm is available.");
-    return ['message' => $ciphertext, 'hash' => $hash];
+    return array('message' => $ciphertext, 'hash' => $hash);
   }
   /*
    * Validates a hash in a timing attack aware manner.
