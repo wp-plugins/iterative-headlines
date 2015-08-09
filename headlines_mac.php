@@ -30,11 +30,11 @@ class Iterative_MACComputer {
       // this should be the step that any user modified messages get dumped. if anything bad happens after this, we must assume it is
       // a security risk.
       
-      if(static::validateHash($message, $hash, $key) === false) {
+      if(self::validateHash($message, $hash, $key) === false) {
         return false;
       }
 
-      $message = static::prepareCiphertext($message);
+      $message = self::prepareCiphertext($message);
       return json_decode($message, true);
   }
   /*
@@ -47,17 +47,17 @@ class Iterative_MACComputer {
    */
   public static function prepareMessage($message, $key) {
     $plaintext = json_encode($message);
-    $ciphertext = static::preparePlaintext($plaintext);
-    $hash = static::hash($ciphertext, $key);
+    $ciphertext = self::preparePlaintext($plaintext);
+    $hash = self::hash($ciphertext, $key);
     if($hash === false)
        throw new RuntimeException("Cowardly refusing to return ciphertext when hash calculation fails. Check that the appropriate HMAC algorithm is available.");
-    return ['message' => $ciphertext, 'hash' => $hash];
+    return array('message' => $ciphertext, 'hash' => $hash);
   }
   /*
    * Validates a hash in a timing attack aware manner.
    */
   public static function validateHash($message, $hash, $key) {
-    if(!hash_equals(static::hash($message, $key), $hash))
+    if(!hash_equals(self::hash($message, $key), $hash))
       return false;
     return true;
   }

@@ -4,7 +4,7 @@ Plugin Name: Viral Headlines&trade;
 Plugin URI: http://www.viralheadlines.net/
 Description: Test your post titles and headlines with state-of-the-art artificial intelligence. 
 Author: Iterative Research Inc.
-Version: 1.4
+Version: 1.4.2
 Author URI: mailto:joe@iterative.ca
 License: GPLv2+
 */
@@ -31,7 +31,10 @@ define("ITERATIVE_ENABLE_GET_PARAMETER", false);
 
 add_action( 'admin_menu', 'iterative_add_admin_menu' );
 add_action( 'admin_init', 'iterative_settings_init' );
-add_filter( 'enter_title_here', function() { return __("Enter primary headline here"); });
+function iterative_title_override_text() { 
+	return __("Enter primary headline here"); 
+};
+add_filter( 'enter_title_here', "iterative_title_override_text");
 add_action( 'edit_form_before_permalink', "iterative_add_headline_variants");
 add_action( 'save_post', 'iterative_save_headline_variants', 10, 3 );
 add_filter( 'the_title', 'iterative_change_headline', 10, 2 );
@@ -245,14 +248,15 @@ function iterative_add_javascript() {
 	}
 }
 
-add_filter('preprocess_comment', function($comment) {
+add_filter('preprocess_comment', "iterative_preprocess_comment");
+function iterative_preprocess_comment($comment) {
 	if(isset($_SESSION['iterative_comments_posted'])) {
 		$_SESSION['iterative_comments_posted'][] = $comment['comment_post_ID'];
 	} else {
 		$_SESSION['iterative_comments_posted'] = array($comment['comment_post_ID']);
 	}
 	return $comment;
-});
+}
 
 
 /* ====================================================
@@ -364,8 +368,10 @@ function iterative_add_headline_variants($post) {
 						$best_key = $k;
 					}
 
-					$lresults[$k] = iterative_ib($lc, $score['a'], $score['b']);;
-					$uresults[$k] = iterative_ib($uc, $score['a'], $score['b']);;
+					if(isset($score['b']) && $score['b'] != 0) {
+						$lresults[$k] = iterative_ib($lc, $score['a'], $score['b']);;
+						$uresults[$k] = iterative_ib($uc, $score['a'], $score['b']);;
+					}
 				}
 			}
 
