@@ -248,14 +248,15 @@ function iterative_add_javascript() {
 	}
 }
 
-add_filter('preprocess_comment', function($comment) {
+add_filter('preprocess_comment', "iterative_preprocess_comment");
+function iterative_preprocess_comment($comment) {
 	if(isset($_SESSION['iterative_comments_posted'])) {
 		$_SESSION['iterative_comments_posted'][] = $comment['comment_post_ID'];
 	} else {
 		$_SESSION['iterative_comments_posted'] = array($comment['comment_post_ID']);
 	}
 	return $comment;
-});
+}
 
 
 /* ====================================================
@@ -367,8 +368,10 @@ function iterative_add_headline_variants($post) {
 						$best_key = $k;
 					}
 
-					$lresults[$k] = iterative_ib($lc, $score['a'], $score['b']);;
-					$uresults[$k] = iterative_ib($uc, $score['a'], $score['b']);;
+					if(isset($score['b']) && $score['b'] != 0) {
+						$lresults[$k] = iterative_ib($lc, $score['a'], $score['b']);;
+						$uresults[$k] = iterative_ib($uc, $score['a'], $score['b']);;
+					}
 				}
 			}
 

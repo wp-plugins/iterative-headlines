@@ -232,9 +232,11 @@ function iterative_options_page(  ) {
 
 }
 
-add_filter("admin_footer_text", function($in) {
+add_filter("admin_footer_text", "iterative_admin_footer_text");
+
+function iterative_admin_footer_text($in) {
  $in .= '<br /><span id="footer-thankyou">Some icons made by <a href="http://www.flaticon.com/authors/freepik" title="Freepik">Freepik</a> are licensed <a href="http://creativecommons.org/licenses/by/3.0/" title="Creative Commons BY 3.0">CC BY 3.0</a>.</span>';
  return $in;
-});
+}
 
 ?>
