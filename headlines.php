@@ -31,7 +31,10 @@ define("ITERATIVE_ENABLE_GET_PARAMETER", false);
 
 add_action( 'admin_menu', 'iterative_add_admin_menu' );
 add_action( 'admin_init', 'iterative_settings_init' );
-add_filter( 'enter_title_here', function() { return __("Enter primary headline here"); });
+function iterative_title_override_text() { 
+	return __("Enter primary headline here"); 
+};
+add_filter( 'enter_title_here', "iterative_title_override_text");
 add_action( 'edit_form_before_permalink', "iterative_add_headline_variants");
 add_action( 'save_post', 'iterative_save_headline_variants', 10, 3 );
 add_filter( 'the_title', 'iterative_change_headline', 10, 2 );
