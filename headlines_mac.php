@@ -67,7 +67,7 @@ class Iterative_MACComputer {
   public static function hash($message, $secret) {
     $hash = hash_hmac('sha256', $message, $secret);
     $hash = base64_encode($hash); // we do not decode the hash ever at this point, only compare as base64 encoded hashes.
-    
+    $hash = substr($hash, 0, 8); 	// truncate teh hash because we use a huge set of cookies and there's no security requirements here. 
     if($hash === false) // but base64_encode has a note in the documentation that it may return false.
       throw new RuntimeException("Failed to compute hash because base64 failed.");
     return $hash;

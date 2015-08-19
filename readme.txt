@@ -3,7 +3,7 @@ Contributors: iterative
 Tags: title, testing, experiment, headline, viral
 Requires at least: 3.0.1
 Tested up to: 4.3
-Stable tag: 1.4.2
+Stable tag: 1.5.0
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -79,6 +79,10 @@ You can email me at joe@iterative.ca — I'm happy to chat about optimizing your
 = 1.4.2 = 
 * Support for PHP 5.2, 5.3. 
 
+= 1.5.0 =
+* Synchronizing UI with pro version's UI.
+
+
 == Upgrade Notice ==
 
 = 1.0 =
@@ -89,3 +93,6 @@ Much faster. The plugin now caches all results locally and no longer has any maj
 
 = 1.4.2 =
 Fixing support for older versions of PHP (any version greater than 5.2.4 should work now).
+
+= 1.5.0 =
+Updating all material for the recent release of the pro version. New functionality on basic version. Support for the new API.

@@ -2,27 +2,31 @@
 require_once dirname(__FILE__) . "/headlines_mac.php";
 
 class IterativeVariantInformer {
-	public $stories = array();
-	public $unique_id = null;
-	public function queueVariant($unique_id, $experiment_id, $experiment_type, $user, $variant) {
-		$this->unique_id = $unique_id;
-		if(!is_array($this->stories[$experiment_type]))
-			$this->stories[$experiment_type] = array();
-		$this->stories[$experiment_type][] = array($experiment_id, $user, $variant);
-	}
-	public function __destruct() {
-		if(count($this->stories) > 0 && $this->unique_id !== null)
-			IterativeAPI::makeRequest("variants", array("unique_id" => $this->unique_id, "variants" => json_encode($this->stories)));
-	}
+        public $stories = array();
+        public $unique_id = null;
+        public $user = null;
+        public function queueVariant($unique_id, $experiment_id, $experiment_type, $user, $variant) {
+                $this->unique_id = $unique_id;
+                $this->user = $user;
+                if(!is_array($this->stories[$experiment_type]))
+                        $this->stories[$experiment_type] = array();
+                $this->stories[$experiment_type][] = array($experiment_id, $variant);
+        }
+        public function __destruct() {
+                if(count($this->stories) > 0 && $this->unique_id !== null)
+                        IterativeAPI::makeRequest("variants", array("user" => $this->user, "unique_id" => $this->unique_id, "variants" => json_encode($this->stories)));
+        }
 }
 
 global $iterative_informer;
 $iterative_informer = new IterativeVariantInformer();
 class IterativeAPI {
-	private static $api_endpoint = "http://1.api.viralheadlines.net/";
-	private static $api_version = 1.4;
+	private static $api_endpoint = "http://2.api.viralheadlines.net/";
+	private static $api_version = 1.5;
 	private static $reject_age = 86400;
 	private static $request_age = 6400;
+	private static $variant_length = 8;
+
 	public static function getURL($page) { 
 		return self::$api_endpoint . $page;
 	}
@@ -92,17 +96,34 @@ class IterativeAPI {
 		}
 		if(!is_array($meta)) 
 			$meta = array();
+
 		$parameters = array(
 			'experiment_id' => $post_id, 
 			'experiment_type' => $experiment_type,
 			'unique_id' => $unique_id, 
-			'type'=>$type, 
+			'type' => $type, 
 			'variants' => json_encode($send), 
 			'meta' => json_encode($meta)
 		);
 		$response = self::makeRequest("experiment", $parameters);
-		
-		$model = array();
+
+		if(isset($response['other'])) {
+			$other = $response['other'];
+			unset($response['other']);	
+		}		
+		self::storeProbabilities($post_id, $type, $response, $experiment_type);
+
+		if(is_array($other)) {
+			foreach($other as $type=>$parameters) {
+				// NOTE: other is only appropriate when the experiment ID is the same as the post ID, 
+				// as in the case of excerpts and presumably custom fields.
+
+				// NOTE 2: response can describe multiple  algorithm choices.
+				self::storeProbabilities($post_id, $type, $parameters, $experiment_type);
+			}
+		}
+
+		/*$model = array();
    		if(!isset($response['model_type'])) {
 			$response['model_type'] = 'sts';
 			$response['model_version'] = 0;
@@ -121,10 +142,12 @@ class IterativeAPI {
 			$models = array();
 		$models[$response['model_type']] = $model_variables;
 		// store the parameters.
+
+
 		update_post_meta($post_id, "_iterative_models_{$type}_{$experiment_type}", $models);
 
 		$response['timestamp'] = time();
-		update_post_meta($post_id, "_iterative_parameters_{$response['model_type']}_{$type}_{$experiment_type}", $response);
+		update_post_meta($post_id, "_iterative_parameters_{$response['model_type']}_{$type}_{$experiment_type}", $response);*/
 		return $response;
 	}
 
@@ -146,13 +169,21 @@ class IterativeAPI {
 				'unique_id' => self::getGUID(), 
 				'type'=>$type, 
 				'variants'=>$variants
-				);
+		);
 		$response = self::makeRequest("advice", $parameters);
+
+		if(is_array($response['messages']))
+			shuffle($response['messages']);
+
+		$lift = self::makeRequest("lift", $parameters);
+		if(is_array($lift['messages'])) {
+			$messages = array_merge($lift['messages'], $response['messages']);
+		} else { $messages = $response['messages']; }
 
 		if(isset($response['parameters']) && !empty($response['parameters']))
 			update_post_meta($post_id, "_iterative_parameters_sts_{$type}_headlines", $response['parameters']);
 
-		return $response['messages'];
+		return $messages; // $response['messages'];
 	}
 
 	public static function deleteParameters($post_id, $model_type='sts', $experiment_type='headlines') {
@@ -170,21 +201,12 @@ class IterativeAPI {
 				$post_meta['timestamp'] > time()+self::$request_age || 
 				(isset($post_meta['next_timestamp']) && $post_meta['next_timestamp'] < time())
 		  )
-			return self::serverProbabilities($post_id, $type, $experiment_type);
+			return self::serverProbabilities($post_id, $type, $model_type, $experiment_type);
 		else return $post_meta;
 	}
 
 
-	private static function serverProbabilities($post_id, $type, $experiment_type='headlines') {
-		// ask the server for the probabilities/model of each variant. store them.
-		$parameters = array(
-				'experiment_id' => $post_id, 
-				'experiment_type' => $experiment_type, 
-				'unique_id' => self::getGUID(), 
-				'type'=>$type, 
-				'model'=>'sts'
-				);
-		$response = self::makeRequest("parameters", $parameters);
+	private static function storeProbabilities($post_id, $type, $response, $experiment_type='headlines') {
 		$response['timestamp'] = time();
 		if(!isset($response['model_type'])) {
 			$response['model_type'] = 'sts';
@@ -199,6 +221,8 @@ class IterativeAPI {
 		foreach($response as $key=>$value) {
 			if(substr($key, 0, 6) == "model_") $model_variables[substr($key, 6)] = $value;
 		}
+		if(count($model_variables) == count($response)) 
+			return; // nothing to store.
 
 		$models = get_post_meta($post_id, "_iterative_models_{$type}_{$experiment_type}", true);
 		if(!is_array($models)) 
@@ -209,42 +233,100 @@ class IterativeAPI {
 		// store the parameters.
 		update_post_meta($post_id, "_iterative_parameters_{$response['model_type']}_{$type}_{$experiment_type}", $response);
 		update_post_meta($post_id, "_iterative_models_{$type}_{$experiment_type}", $models);
+	}
+
+	private static function serverProbabilities($post_id, $type, $model=null, $experiment_type='headlines') {
+		// ask the server for the probabilities/model of each variant. store them.
+		$parameters = array(
+			'experiment_id' => $post_id, 
+			'experiment_type' => $experiment_type,
+			'unique_id' => self::getGUID(), 
+			'type'=>$type, 
+			'model'=>$model
+		);
+
+		$response = self::makeRequest("parameters", $parameters);
+		self::storeProbabilities($post_id, $type, $response, $experiment_type);
+
 		return $response;
 	}
 
-	public static function getVariantForUserID($post_id, $user_id, $experiment_type='headlines') {
-		$variants = get_post_meta($post_id, "_iterative_variants_{$experiment_type}", true);
-		if(isset($variants) && isset($variants[$user_id])) {
-			return $variants[$user_id];
-		} 
-		return null;
-		
+
+	public static function getStoredVariants() {
+		$valid_variants = false;
+		if(isset($_COOKIE['iterative_variants'])) {
+			$variants = stripslashes($_COOKIE['iterative_variants']);
+			$mac = $_COOKIE['iterative_variants_hash'];
+			$message = Iterative_MACComputer::readMessage($variants, $mac, self::getMACKey());
+
+			if($message !== false) {
+				$variants = $message;
+				$valid_variants = true;
+			}
+		}
+
+		if($valid_variants) return $variants;
+		else return null;
+	}
+	
+	public static function getVariantForUserID($post_id, $user_id=null, $experiment_type='headlines') {
+		// TODO: why is user_id here? its unused.
+		$variants = self::getStoredVariants();
+
+		if($variants === null) {
+			return null;
+		} else {
+			return $variants[$experiment_type][$post_id];
+		}
 	}
 
 	public static function storeVariantForUserID($post_id, $user_id, $variant_id, $experiment_type='headlines') {
-		$variants = get_post_meta($post_id, "_iterative_variants_{$experiment_type}", true);
-		if(!isset($variants) || $variants == false) {
-			$variants = array();
-		}
-		$variants[$user_id] = $variant_id;
-		update_post_meta($post_id, "_iterative_variants_{$experiment_type}", $variants);
+		// get the message and update it. 
+		// when adding a variant id, might need to truncate.
+		$variants = self::getStoredVariants();
+		if($variants === null) $variants = array();
+		if(!is_array($variants[$experiment_type])) 
+			$variants[$experiment_type] = array();
+		
+		$variants[$experiment_type][$post_id] = substr($variant_id, 0, self::$variant_length);	// store a shortened version
+		$crypted = Iterative_MACComputer::prepareMessage($variants, self::getMACKey());
+
+		// retest every 3 days at most.
+		setcookie("iterative_variants", $crypted['message'], time()+60*60*24*3,COOKIEPATH, COOKIE_DOMAIN, false);
+		setcookie("iterative_variants_hash", $crypted['hash'], time()+60*60*24*3, COOKIEPATH, COOKIE_DOMAIN, false);
+		$_COOKIE['iterative_variants'] = $crypted['message'];
+		$_COOKIE['iterative_variants_hash'] = $crypted['hash'];
 	}
 
 	public static function forceVariant($post_id, $variant_hash, $experiment_type='headlines') {
 		$user_id = self::getUserID();
 		$unique_id = self::getGUID();
-		self::tellServerVariantForUserID($unique_id, $user_id, $hash, $post_id, $experiment_type);
-		self::storeVariantForUserID($post_id, $user_id, $hash, $experiment_type);
+		self::tellServerVariantForUserID($unique_id, $user_id, $variant_hash, $post_id, $experiment_type);
+		self::storeVariantForUserID($post_id, $user_id, $variant_hash, $experiment_type);
+	}
+	public static function findBestHashset($hash, $hashes) {
+		if($hash === null)
+			return false;
+
+		foreach($hashes as $test) {
+			if(substr($test, 0, strlen($hash)) == $hash) 
+				return $test;
+		}
+
+		return false;
 	}
 	public static function selectVariant($post_id, $variant_hashes, $experiment_type='headlines', $model_type=null) {
 		// support models.
 		if(count($variant_hashes) == 1) 
 			return current($variant_hashes);
 
+		if(!defined("DONOTCACHEPAGE"))
+			define('DONOTCACHEPAGE', true);
+
 		$user_id = self::getUserID();
 		$unique_id = self::getGUID();
 		
-		if(($variant = self::getVariantForUserID($post_id, $user_id, $experiment_type))!==null && in_array($variant, $variant_hashes)) {
+		if(($variant = self::findBestHashset(self::getVariantForUserID($post_id, $user_id, $experiment_type), $variant_hashes)) !== false && in_array($variant, $variant_hashes)) {
 			return $variant;	
 		} else {
 			// select the right model.
@@ -255,6 +337,7 @@ class IterativeAPI {
 					$parameters = IterativeAPI::updateExperiment($post_id, iterative_get_variants($post_id), $experiment_type);
 					return $variant_hashes[array_rand($variant_hashes)];
 				}
+
 				$best_model = current($models);
 				$second_model = current($models);
 				foreach($models as $model) {
@@ -272,13 +355,11 @@ class IterativeAPI {
 					$best_model = $second_model;
 				if(!isset($best_model['version'])) 
 					$best_model['version'] = "0";
-
+				
 				$method = "model_" . $best_model['type'];
 			} else {
 				$method = "model_" . $model_type;
 			}
-
-			
 
 			try {
 				$hash = self::$method($post_id, $variant_hashes, $experiment_type);
@@ -367,13 +448,39 @@ class IterativeAPI {
 		$uid = uniqid(self::getGUID());
 		return $uid;
 	}
+
+	private static $messages = array();
+	public static function success($type, $variant_id, $experiment_id, $experiment_type='headlines') {
+		// variant ID might be a partial, find best match.
+		$variant_id = self::findBestHashset($variant_id, array_keys(iterative_get_variants($experiment_id, $experiment_type)));
+		self::$messages[] = array($experiment_id, $variant_id, $experiment_type, $type);
+	}
+	public static function outputTrackerJS() {
+                if(!defined("DONOTCACHEPAGE"))
+                        define('DONOTCACHEPAGE', true);
+
+		$url = self::$api_endpoint . "js/mass?user=" . self::getUserID() . "&unique_id=" . self::getGUID() . "&refclass=" . iterative_get_referring_type();
+		if(count(self::$messages) > 0) {
+			$url .= "&messages=" . urlencode(json_encode(self::$messages));
+		}
+
+                echo "<script type='text/javascript' src='" . $url . "'></script>";
+	}
 	
+
+	// TODO: in version 1.6 remove these. they're unused now.
 	public static function getTrackerURL() {
-		// the logger should set an identical UID/hash cookie on api.pathfinding.ca
-		return self::$api_endpoint . "js/log?user=" . self::getUserID() . "&unique_id=" . self::getGUID() . "&refclass=" . iterative_get_referring_type();;
+                if(!defined("DONOTCACHEPAGE"))
+                        define('DONOTCACHEPAGE', true);
+
+		// the logger should set an identical UID/hash cookie on 
+		return self::$api_endpoint . "js/log?user=" . self::getUserID() . "&unique_id=" . self::getGUID() . "&refclass=" . iterative_get_referring_type();
 	}
 
 	public static function getSuccessURL($type, $variant_id, $experiment_id, $experiment_type='headlines') {
+                if(!defined("DONOTCACHEPAGE"))
+                        define('DONOTCACHEPAGE', true);
+
 		// only show this when a success is legitimate... that is, a click through from another page on the site w/ variant 
 		return self::$api_endpoint . "js/success?experiment_id=" . $experiment_id . "&user=" . self::getUserID() . "&unique_id=" . self::getGUID() . "&type=" . $type . "&variant_id=" . $variant_id . "&experiment_type=" . $experiment_Type;
 	}
