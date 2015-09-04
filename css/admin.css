@@ -12,6 +12,20 @@
     background-position: 6px 6px;
     background-repeat: no-repeat;
 }
+.iterative-excerpt-variant {
+    padding-left: 44px;
+    background-color: #fff;
+    background-image: url("../atom_512.png");
+    background-position: 6px 12px;
+    background-repeat: no-repeat;
+    background-size: 32px;
+}
+
+.iterative-excerpt-wrapper { 
+    width: 98%; 
+}
+
+
 .iterative-message {
     position: relative;
     text-align: right;
@@ -22,11 +36,15 @@
     line-height: 14px;
     cursor:pointer;
     opacity:0.4;
+    z-index:100;
 }
 .iterative-message:hover { opacity:1; }
 
 .iterative-message.up {
     top:-27px;
+}
+.iterative-message.excerpt {
+    top:12px; right:3%;
 }
 .iterative-message.winner { opacity: 1; }
 .iterative-message.winner:hover { opacity:0.5; }

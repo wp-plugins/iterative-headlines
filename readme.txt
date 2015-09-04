@@ -2,8 +2,8 @@
 Contributors: iterative
 Tags: title, testing, experiment, headline, viral
 Requires at least: 3.0.1
-Tested up to: 4.2.2
-Stable tag: 1.4
+Tested up to: 4.3
+Stable tag: 1.5.1
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -23,6 +23,7 @@ The algorithm we use in this plugin is our own secret blend of research from Sta
 
 Recent research from the University of Tokyo shows that on small websites (roughly, less than 1,000 views per article) this plugin achieves up to 57% better results than other methods of testing. On busier sites, the results are even more surprising. With testing, you *will* regularly see results up to 2,000% better (and often in surprising ways!) — if you were to get a result that is 2,000% better (turning what would have been 1 visit in to 20 visits) with another solution, with Viral Headlines™ you would see a 3,508% improvement (turning 1 visit in to 35!). 
 
+This plugin is completely free, with no strings attached. The API that powers the artificial intelligence is completely free for you too. We offer a Pro version of the artificial intelligence at http://www.viralheadlines.com/ which has been shown to perform as much as 40x better than the free version (which performs substantially better than traditional style testing!). Please consider supporting us and further research and development with the Pro version.
 
 == Installation ==
 
@@ -76,6 +77,13 @@ You can email me at joe@iterative.ca — I'm happy to chat about optimizing your
 = 1.2 =
 * New API compatibility. Speed improvements.
  
+= 1.4.2 = 
+* Support for PHP 5.2, 5.3. 
+
+= 1.5.0 =
+* Synchronizing UI with pro version's UI.
+
+
 == Upgrade Notice ==
 
 = 1.0 =
@@ -83,3 +91,9 @@ This is the initial release.
 
 = 1.2 =
 Much faster. The plugin now caches all results locally and no longer has any major effect on load time. Also, full support for UTF-8.
+
+= 1.4.2 =
+Fixing support for older versions of PHP (any version greater than 5.2.4 should work now).
+
+= 1.5.0 =
+Updating all material for the recent release of the pro version. New functionality on basic version. Support for the new API.
