@@ -4,7 +4,7 @@ Plugin Name: Viral Headlines&trade;
 Plugin URI: http://www.viralheadlines.net/
 Description: Test your post titles and headlines with state-of-the-art artificial intelligence. 
 Author: Iterative Research Inc.
-Version: 1.5.0
+Version: 1.5.1
 Author URI: mailto:joe@iterative.ca
 License: GPLv2+
 */
@@ -64,7 +64,7 @@ function iterative_start_session() {
 
 	ob_start();
 	if(!session_id()) {
-		session_start();
+		@session_start();
 	}
 }
 
