@@ -37,7 +37,7 @@ class IterativeAPI {
 		$url_parameters = http_build_query($blob);
 		$url = self::getEndpoint() . "{$endpoint}?" . $url_parameters . "&v=" . self::$api_version . "&cangz=" . (function_exists("gzdecode") ? "yes" : "no");
 		
-		$request = wp_remote_get($url);
+		$request = wp_remote_get($url, array("timeout" => 20));
 		$response = json_decode(wp_remote_retrieve_body( $request ), true);
 		if(isset($response['error'])) {
 			global $iterative_notices;
