@@ -14,6 +14,7 @@ $iterative_disable_title_filter = false;
 
 require_once dirname(__FILE__) . "/headlines_advice.php";
 require_once dirname(__FILE__) . "/headlines_api.php";
+require_once dirname(__FILE__) . "/headlines_dashboard.php";
 require_once dirname(__FILE__) . "/headlines_pointer.php";
 require_once dirname(__FILE__) . "/headlines_options.php";
 require_once dirname(__FILE__) . "/headlines_messages.php";

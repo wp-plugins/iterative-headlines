@@ -26,17 +26,26 @@ class IterativeAPI {
 	private static $reject_age = 86400;
 	private static $request_age = 6400;
 	private static $variant_length = 8;
-
+	public static $isOOS = false;
 	public static function getURL($page) { 
 		return self::$api_endpoint . $page;
 	}
 
+	public static function checkOOS() {
+		if(self::$isOOS)
+			return true;
+		$result = self::makeRequest("oos", array("unique_id" => self::getGUID()));
+
+		return (self::$isOOS);
+	}
 	public static function getEndpoint() { return self::$api_endpoint; }
 
 	public static function makeRequest($endpoint, $blob=array()) {
 		$url_parameters = http_build_query($blob);
 		$url = self::getEndpoint() . "{$endpoint}?" . $url_parameters . "&v=" . self::$api_version . "&cangz=" . (function_exists("gzdecode") ? "yes" : "no");
-		
+		if(self::$isOOS) 
+			return;
+
 		$request = wp_remote_get($url, array("timeout" => 20));
 		$response = json_decode(wp_remote_retrieve_body( $request ), true);
 		if(isset($response['error'])) {
@@ -55,6 +64,8 @@ class IterativeAPI {
 				deactivate_plugins( plugin_basename( __FILE__ ) );
 			} else if($response['special'] == "DELIVER" && is_admin()) {
 				echo "<p>" . $response['error'] . "</p>";
+			} else if($response['special'] == "OOS") {
+				self::$isOOS = true;
 			}
 		}
 		return $response;
